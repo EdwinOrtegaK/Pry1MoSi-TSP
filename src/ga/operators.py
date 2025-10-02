@@ -21,17 +21,32 @@ def pmx(parent1: Tour, parent2: Tour) -> Tour:
     n = len(parent1)
     a, b = sorted(random.sample(range(n), 2))
     child = [None] * n
-    # copia bloque
+
+    # Copiar segmento de parent1
     child[a:b+1] = parent1[a:b+1]
-    # mapeo del bloque
-    mapping = {parent2[i]: parent1[i] for i in range(a, b+1)}
-    # relleno posiciones fuera del bloque
-    for i in list(range(0, a)) + list(range(b+1, n)):
-        v = parent2[i]
-        while v in mapping:
-            v = mapping[v]
-        child[i] = v
+
+    # Para cada gen en el segmento de parent2, mapear si no está ya en el hijo
+    for i in range(a, b+1):
+        if parent2[i] not in child:
+            pos = i
+            val = parent2[i]
+            # Seguir el ciclo de mapeo hasta encontrar hueco
+            while True:
+                pos = parent1.index(val)
+                if child[pos] is None:
+                    child[pos] = parent2[i]
+                    break
+                val = parent2[pos]
+
+    # Rellenar los huecos restantes con genes de parent2
+    for i in range(n):
+        if child[i] is None:
+            child[i] = parent2[i]
+
     return child  # type: ignore
+
+
+
 
 def mutate_inversion(order: Tour, p: float = 0.2) -> Tour:
     if random.random() > p:
