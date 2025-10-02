@@ -100,7 +100,7 @@ def main():
                 "pmut": result["params"]["pmut"],
                 "elitism": result["params"]["elitism"],
                 "best_cost": result["best"]["cost"],
-                "best_len": len(result["best"]["tour"]),
+                "best_len": len(coords),
                 "time_s": result["time_s"],
                 "file_json": str(out_json),
             }
