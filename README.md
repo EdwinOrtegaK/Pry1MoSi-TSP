@@ -106,7 +106,7 @@ pytest -q tests/test_ga.py
 # pytest -q -m "not slow"
 ```
 
-## Cómo correr cada caso (paso a paso)
+## Cómo correr cada caso
 
 ### Caso A – `eil101` (TSPLIB)
 
@@ -154,28 +154,46 @@ python scripts\make_summary_eil101.py
 
 Mismos comandos cambiando el dataset y la carpeta de salida:
 
+**1) GA con 3 semillas** (genera JSON por corrida)
 ```powershell
-# GA (tres semillas)
 python -m src.ga.tsp_ga `
   --data data/tsplib/gr229.tsp `
-  --N 400 --maxIter 2500 `
+  --N 300 --maxIter 2000 `
   --crossover OX --pmut 0.2 --elitism 0.03 `
   --seed 42 `
   --out results/gr229/ga_seed42.json
-# (repetir para 1337 y 2025 cambiando --seed y --out)
 
-# MTZ
-python -m src.lp.tsp_mtz_pulp `
+python -m src.ga.tsp_ga `
   --data data/tsplib/gr229.tsp `
-  --time_limit 300 `
-  --out results/gr229/mtz_opt.json
+  --N 300 --maxIter 2000 `
+  --crossover OX --pmut 0.2 --elitism 0.03 `
+  --seed 1337 `
+  --out results/gr229/ga_seed1337.json
 
-# Resumen (si creas un make_summary_gr229.py análogo)
-# python scripts\make_summary_gr229.py
+python -m src.ga.tsp_ga `
+  --data data/tsplib/gr229.tsp `
+  --N 300 --maxIter 2000 `
+  --crossover OX --pmut 0.2 --elitism 0.03 `
+  --seed 2025 `
+  --out results/gr229/ga_seed2025.json
 ```
 
+**2) LP/MTZ (óptimo/cota con límite de tiempo)**  
+> MTZ soporta **TSPLIB** y **CSV** (ver Caso C).
+
+```powershell
+python -m src.lp.tsp_mtz_pulp `
+  --data data/tsplib/gr229.tsp `
+  --time_limit 600 `
+  --out results/gr229/mtz_opt.json
+```
 > **Nota:** `gr229` es más grande; puedes necesitar mayor `time_limit` y/o reducir `N`/`maxIter` si no buscas resultados finales.
 
+**3) Resumen (% error GA vs MTZ)**
+```powershell
+python scripts\make_summary_gr229.py
+# -> results/gr229/ga_runs.csv
+```
 
 ### Caso C – `custom` (CSV propio)
 
@@ -188,7 +206,7 @@ id,x,y
 ...
 ```
 
-**1) GA sobre CSV**
+**1) GA con 3 semillas (sobre CSV)**
 ```powershell
 python -m src.ga.tsp_ga `
   --data data/custom/mi_scenario.csv `
@@ -196,24 +214,43 @@ python -m src.ga.tsp_ga `
   --crossover OX --pmut 0.2 --elitism 0.03 `
   --seed 42 `
   --out results/custom/ga_seed42.json
+
+python -m src.ga.tsp_ga `
+  --data data/custom/mi_scenario.csv `
+  --N 300 --maxIter 2000 `
+  --crossover OX --pmut 0.2 --elitism 0.03 `
+  --seed 1337 `
+  --out results/custom/ga_seed1337.json
+
+python -m src.ga.tsp_ga `
+  --data data/custom/mi_scenario.csv `
+  --N 300 --maxIter 2000 `
+  --crossover OX --pmut 0.2 --elitism 0.03 `
+  --seed 2025 `
+  --out results/custom/ga_seed2025.json
 ```
 
 **2) LP/MTZ sobre CSV** (soportado por `tsp_mtz_pulp.py`)
 ```powershell
 python -m src.lp.tsp_mtz_pulp `
   --data data/custom/mi_scenario.csv `
-  --time_limit 120 `
+  --time_limit 300 `
   --out results/custom/mtz_opt.json
 ```
 
 **3) Resumen**  
 Crea un script `scripts/make_summary_custom.py` análogo al de `eil101` para consolidar `% error`.
+```powershell
+python scripts\make_summary_custom.py
+# -> results/custom/ga_runs.csv
+```
 
-
-## Orquestador: todo en un comando
+## Orquestador:
 
 `run_scenario.py` ejecuta **GA multi-semilla + MTZ + (figuras y summary si están soportados)**.
+> PowerShell: usa el backtick ` para saltos de línea (no >>).
 
+### Caso A — `eil101` (TSPLIB)
 ```powershell
 python -m scripts.run_scenario `
   --name eil101 `
@@ -221,12 +258,29 @@ python -m scripts.run_scenario `
   --time_limit 120
 ```
 
+### Caso B — `gr229` (TSPLIB)
+```powershell
+python -m scripts.run_scenario `
+  --name gr229 `
+  --seeds 42 1337 2025 `
+  --time_limit 600
+```
+> Nota: gr229 es más grande. Si tu máquina sufre, sube --time_limit o luego corre GA/MTZ por separado.
+
+### Caso C — `custom` (CSV propio)
+Si tu run_scenario.py soporta el nombre custom (o equivalente en tu script):
+```powershell
+python -m scripts.run_scenario `
+  --name custom `
+  --seeds 42 1337 2025 `
+  --time_limit 300
+```
+> Si tu versión de run_scenario.py no mapea --name custom a data/custom/mi_scenario.csv, corre GA y MTZ manualmente (como ya tienes en el README) o ajusta el script para aceptar --data explícito.
+
 Parámetros típicos:
 - `--name eil101|gr229|custom_name`
 - `--seeds ...` lista de semillas
 - `--time_limit N` segundos para MTZ  
-  *(si el script soporta `--skip_mtz`, puedes omitir MTZ en esa corrida)*
-
 > Si parece “congelado” en MTZ, es normal que no veas logs desde el orquestador. Corre MTZ **aparte** para ver progreso o asegúrate de que `tsp_mtz_pulp.py` use `PULP_CBC_CMD(msg=True, timeLimit=..., maxSeconds=...)`.
 
 Esto:
